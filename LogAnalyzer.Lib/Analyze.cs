@@ -1,6 +1,7 @@
 ﻿using Aspose.Zip;
 using Aspose.Zip.Saving;
 using System.Globalization;
+using System.Net;
 
 namespace LogAnalyzer.Lib
 {
@@ -138,6 +139,70 @@ namespace LogAnalyzer.Lib
                     }
                 }
             }
+        }
+
+        #region UploadLogToRemoteServer using HttpWebRequest
+        /*
+        public async Task UploadLogToRemoteServer(string serverIP, string fileName, string filePath)
+        {
+            string requestUri = Path.Combine(serverIP + @"/upload/", fileName);
+            HttpWebRequest client = (HttpWebRequest)WebRequest.Create(requestUri);
+            client.Method = WebRequestMethods.Http.Post;
+
+            client.AllowWriteStreamBuffering = true;
+            client.SendChunked = true;
+            client.ContentType = "multipart/form-data;";
+            client.Timeout = int.MaxValue;
+            using (FileStream fileStream = File.OpenRead(filePath))
+            {
+                await fileStream.CopyToAsync(client.GetRequestStream());
+            }
+            var response = new StreamReader(client.GetResponse().GetResponseStream()).ReadToEnd();
+        }
+        */
+        #endregion
+
+        public async Task<string> UploadLogToRemoteServer(string url, string filepath)
+        {
+            var request = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(3600)
+            };
+            var form = new MultipartFormDataContent();
+            string? responseString = null;
+            using (var fileStream = new FileStream(filepath, mode: FileMode.Open))
+            {
+                using (var bufferedStream = new BufferedStream(fileStream))
+                {
+                    form.Add(new StreamContent(bufferedStream), "file", new FileInfo(filepath).FullName);
+                    var response = await request.PostAsync(url, form);
+                    responseString = await response.Content.ReadAsStringAsync();
+                    fileStream.Close();
+                }
+            }
+            return responseString;
+        }
+
+        public void DeleteLogsFromAPeriod(string directoryPath, string period)
+        {
+            System.IO.DirectoryInfo di = new DirectoryInfo(directoryPath);
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                if(file.Name.Contains(period)) file.Delete();
+            }
+        }
+
+        public int TotalAvailableLogs(string directoryPath, string period)
+        {
+            System.IO.DirectoryInfo di = new DirectoryInfo(directoryPath);
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                if (file.Name.Contains(period)) Count++;
+            }
+
+            return Count;
         }
 
         private string ConvertToSpecifiedFormat(string data)
