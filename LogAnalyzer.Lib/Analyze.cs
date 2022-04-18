@@ -10,17 +10,19 @@ namespace LogAnalyzer.Lib
         public HashSet<string> UniqueRecords { get; set; } = new HashSet<string>();
         public Dictionary<string, int> errors = new Dictionary<string, int>();
         public int Count { get; set; }
-        public void Search(string path)
+        public bool SearchLogsInDirectories(IList<string> directories, string fileName)
         {
-            StreamReader sr = new StreamReader(path);
-
-            var line = sr.ReadLine();
-
-            while (line != null)
+            foreach (var directory in directories)
             {
-                line = line.Substring(25);
-                UniqueRecords.Add(line);
+                System.IO.DirectoryInfo di = new DirectoryInfo(directory);
+
+                foreach (FileInfo file in di.GetFiles())
+                {
+                    if (file.Name.Equals(fileName)) return true;
+                }
+
             }
+            return false;
         }
 
         private async Task GroupErrors(string path)
@@ -76,7 +78,7 @@ namespace LogAnalyzer.Lib
             using (var sr = new StreamReader(path))
             using (var sw = new StreamWriter(tempFile))
             {
-                string line;
+                string? line;
 
                 while ((line = await sr.ReadLineAsync()) != null)
                 {
@@ -203,6 +205,30 @@ namespace LogAnalyzer.Lib
             }
 
             return Count;
+        }
+
+        public int SearchLogPerSize(string directoryPath, int fromSize, int toSize)
+        {
+            System.IO.DirectoryInfo di = new DirectoryInfo(directoryPath);
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                if (file.Length >= (fromSize * 1000) && file.Length <= (toSize * 1000)) Count++;
+            }
+
+            return Count;
+        }
+
+        public bool SearchLogPerDirectory(string directoryPath, string fileName)
+        {
+            System.IO.DirectoryInfo di = new DirectoryInfo(directoryPath);
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                if (file.Name.Equals(fileName)) return true;
+            }
+
+            return false;
         }
 
         private string ConvertToSpecifiedFormat(string data)
